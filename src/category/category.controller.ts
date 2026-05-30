@@ -7,8 +7,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { Public } from '../common/decorators/public.decator';
 
-@ApiTags('categories')
-@Controller('categories')
+@ApiTags('category')
+@Controller('category')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 

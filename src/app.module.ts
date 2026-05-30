@@ -1,31 +1,29 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { PrismaModule } from './prisma/prisma.module';
 import { CategoryModule } from './category/category.module';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-
+import { UploadModule } from './upload/upload.module';  // <- PASTIKAN ADA
 @Module({
   imports: [
-    // 1. Mengaktifkan ConfigModule secara global
-    ConfigModule.forRoot({ 
-      envFilePath: '.env',
-      isGlobal: true 
-    }),
-    // 2. Keamanan Rate Limiting: Batasi maksimal 20 request per 1 menit per IP komputer
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 20,
-    }]),
-    
-    AuthModule, UserModule, PrismaModule, CategoryModule, ProductModule, OrderModule],
-  controllers: [ AppController ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    AuthModule,
+    UserModule,
+    CategoryModule,
+    ProductModule,
+    OrderModule,
+    UploadModule,   // <- HARUS ADA,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}
