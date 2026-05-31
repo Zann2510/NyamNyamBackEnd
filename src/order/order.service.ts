@@ -1,26 +1,29 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderStatus } from '@prisma/client';
 import { UpdateOrderStatusDto } from './dto/update-order.dto';
 
+// Definisikan tipe untuk item yang akan dibuat
+type OrderItemCreateInput = {
+  productId: string;
+  quantity: number;
+  price: number;
+};
 
 @Injectable()
 export class OrderService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Membuat pesanan baru dengan transaksi atomik
-   * - Validasi stok semua produk
-   * - Hitung total harga
-   * - Buat order & order items
-   * - Kurangi stok produk
-   */
   async createOrder(userId: string, dto: CreateOrderDto) {
+    if (dto.paymentMethod !== 'CASH' && !dto.paymentProofUrl) {
+      throw new BadRequestException('Bukti pembayaran wajib diupload untuk metode pembayaran ini');
+    }
+
     return this.prisma.$transaction(async (tx) => {
       let total = 0;
-      const itemsWithPrice: any[] = [];
+      const itemsWithPrice: OrderItemCreateInput[] = []; // <-- tambahkan tipe
 
-      // 1. Validasi stok dan hitung total
       for (const item of dto.items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
@@ -38,18 +41,18 @@ export class OrderService {
         itemsWithPrice.push({
           productId: item.productId,
           quantity: item.quantity,
-          price: product.price, // snapshot harga saat transaksi
+          price: product.price,
         });
       }
 
-      // 2. Buat order
       const order = await tx.order.create({
         data: {
           userId,
           total,
           deliveryAddress: dto.deliveryAddress,
           paymentMethod: dto.paymentMethod,
-          status: 'PENDING',
+          paymentProofUrl: dto.paymentProofUrl || null,
+          status: dto.paymentMethod === 'CASH' ? OrderStatus.PENDING : OrderStatus.WAITING_PAYMENT, // gunakan enum
           items: {
             create: itemsWithPrice,
           },
@@ -61,7 +64,6 @@ export class OrderService {
         },
       });
 
-      // 3. Kurangi stok produk
       for (const item of dto.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -73,9 +75,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * Mendapatkan semua pesanan milik user tertentu (CUSTOMER)
-   */
   async getUserOrders(userId: string) {
     return this.prisma.order.findMany({
       where: { userId },
@@ -88,9 +87,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * Mendapatkan semua pesanan (untuk ADMIN)
-   */
   async getAllOrders() {
     return this.prisma.order.findMany({
       include: {
@@ -105,9 +101,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * Mendapatkan detail satu pesanan (dengan pengecekan kepemilikan)
-   */
   async getOrderById(orderId: string, userId: string, userRole: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -117,16 +110,12 @@ export class OrderService {
       },
     });
     if (!order) throw new NotFoundException('Pesanan tidak ditemukan');
-    // Cek akses: admin boleh, atau user pemilik pesanan
     if (userRole !== 'ADMIN' && order.userId !== userId) {
       throw new ForbiddenException('Anda tidak memiliki akses ke pesanan ini');
     }
     return order;
   }
 
-  /**
-   * Update status pesanan (hanya ADMIN)
-   */
   async updateOrderStatus(orderId: string, dto: UpdateOrderStatusDto) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Pesanan tidak ditemukan');
@@ -137,11 +126,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * Membatalkan pesanan (oleh user pemilik atau ADMIN)
-   * - Kembalikan stok produk yang dipesan
-   * - Ubah status menjadi CANCELLED
-   */
   async cancelOrder(orderId: string, userId: string, userRole: string) {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId },
@@ -149,27 +133,25 @@ export class OrderService {
     });
     if (!order) throw new NotFoundException('Pesanan tidak ditemukan');
 
-    // Cek otorisasi
     if (userRole !== 'ADMIN' && order.userId !== userId) {
       throw new ForbiddenException('Anda tidak dapat membatalkan pesanan orang lain');
     }
 
-    if (order.status !== 'PENDING') {
-      throw new BadRequestException('Hanya pesanan dengan status PENDING yang dapat dibatalkan');
+    // Perbaiki perbandingan dengan enum
+    if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.WAITING_PAYMENT) {
+      throw new BadRequestException('Hanya pesanan dengan status PENDING atau WAITING_PAYMENT yang dapat dibatalkan');
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Kembalikan stok
       for (const item of order.items) {
         await tx.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
         });
       }
-      // Update status
       return tx.order.update({
         where: { id: orderId },
-        data: { status: 'CANCELLED' },
+        data: { status: OrderStatus.CANCELLED },
       });
     });
   }

@@ -18,6 +18,7 @@ enum OrderStatus {
   DELIVERING
   DELIVERED
   CANCELLED
+  WAITING_PAYMENT
 }
 
 enum PaymentMethod {
@@ -72,6 +73,7 @@ model Order {
   status      OrderStatus   @default(PENDING)
   paymentMethod PaymentMethod?
   deliveryAddress String     // untuk dine-in bisa diisi nomor meja
+  paymentProofUrl String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
