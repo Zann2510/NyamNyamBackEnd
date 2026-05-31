@@ -70,7 +70,6 @@ export class OrderService {
           data: { stock: { decrement: item.quantity } },
         });
       }
-
       return order;
     });
   }
@@ -154,5 +153,69 @@ export class OrderService {
         data: { status: OrderStatus.CANCELLED },
       });
     });
+  }
+
+  async getOrderSummary() {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalOrders, totalRevenue, todayOrders, weekOrders, monthOrders, topProducts] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.aggregate({
+        _sum: { total: true },
+        where: { status: 'DELIVERED' },
+      }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: startOfDay } },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { total: true },
+        where: {
+          createdAt: { gte: startOfWeek },
+          status: 'DELIVERED',
+        },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { total: true },
+        where: {
+          createdAt: { gte: startOfMonth },
+          status: 'DELIVERED',
+        },
+      }),
+      this.prisma.orderItem.groupBy({
+        by: ['productId'],
+        _sum: { quantity: true },
+        orderBy: { _sum: { quantity: 'desc' } },
+        take: 5,
+      }),
+    ]);
+
+    // Ambil detail produk untuk top 5
+    const productIds = topProducts.map((p) => p.productId);
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, name: true, price: true, image: true },
+    });
+
+    const topProductsWithDetails = topProducts.map((tp) => ({
+      id: tp.productId,
+      name: products.find((p) => p.id === tp.productId)?.name || 'Tidak diketahui',
+      price: products.find((p) => p.id === tp.productId)?.price || 0,
+      image: products.find((p) => p.id === tp.productId)?.image || '',
+      totalSold: tp._sum.quantity || 0,
+    }));
+
+    return {
+      totalOrders,
+      totalRevenue: totalRevenue._sum.total || 0,
+      todayOrders,
+      weeklyRevenue: weekOrders._sum.total || 0,
+      monthlyRevenue: monthOrders._sum.total || 0,
+      topProducts: topProductsWithDetails,
+    };
   }
 }

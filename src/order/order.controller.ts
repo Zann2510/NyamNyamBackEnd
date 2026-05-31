@@ -67,4 +67,10 @@ export class OrderController {
   cancelOrder(@Param('id') id: string, @Request() req) {
     return this.orderService.cancelOrder(id, req.user.userId, req.user.role);
   }
+
+  @Roles(Role.ADMIN)
+  @Get('summary')
+  async getOrderSummary() {
+    return this.orderService.getOrderSummary();
+  }
 }

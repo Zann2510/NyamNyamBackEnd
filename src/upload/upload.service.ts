@@ -1,4 +1,3 @@
-// src/upload/upload.service.ts
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
 import { ConfigService } from '@nestjs/config';
@@ -11,9 +10,6 @@ export class UploadService {
     const cloudName = this.configService.get('CLOUDINARY_CLOUD_NAME');
     const apiKey = this.configService.get('CLOUDINARY_API_KEY');
     const apiSecret = this.configService.get('CLOUDINARY_API_SECRET');
-
-    this.logger.log(`Cloud Name: ${cloudName}`);
-    this.logger.log(`API Key: ${apiKey ? '****' + apiKey.slice(-4) : 'missing'}`);
 
     if (!cloudName || !apiKey || !apiSecret) {
       this.logger.error('Cloudinary credentials missing!');
@@ -28,34 +24,29 @@ export class UploadService {
     this.logger.log('Cloudinary configured successfully');
   }
 
-  async uploadToCloudinary(file: Express.Multer.File): Promise<string> {
-  this.logger.log(`Uploading: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
+  async uploadToCloudinary(file: Express.Multer.File, folder: string = 'nyamnyam/products'): Promise<string> {
+    this.logger.log(`Uploading to folder ${folder}: ${file.originalname} (${file.size} bytes)`);
 
-  return new Promise((resolve, reject) => {
-    try {
+    return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'nyamnyam/products',
+          folder: folder,
           transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }],
         },
         (error, result) => {
           if (error) {
-            this.logger.error(`Cloudinary callback error: ${JSON.stringify(error)}`);
-            reject(new InternalServerErrorException(`Cloudinary: ${error.message}`));
+            this.logger.error(`Cloudinary error: ${JSON.stringify(error)}`);
+            reject(new InternalServerErrorException(`Cloudinary error: ${error.message}`));
           } else if (result && result.secure_url) {
-            this.logger.log(`Success: ${result.secure_url}`);
+            this.logger.log(`Upload success: ${result.secure_url}`);
             resolve(result.secure_url);
           } else {
-            this.logger.error(`Invalid result: ${JSON.stringify(result)}`);
-            reject(new InternalServerErrorException('Invalid response from Cloudinary'));
+            this.logger.error('Cloudinary returned no result');
+            reject(new InternalServerErrorException('Upload gagal: respons tidak valid'));
           }
         },
       );
       uploadStream.end(file.buffer);
-    } catch (err) {
-      this.logger.error(`Upload stream error: ${err}`);
-      reject(err);
-    }
-  });
-}
+    });
+  }
 }

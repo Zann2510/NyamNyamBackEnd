@@ -4,36 +4,53 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Public } from '../common/decorators/public.decator';
 import { Role } from '@prisma/client';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UploadService } from './upload.service';
 
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
-        // ← tambah sementara untuk test
+
+  // Admin: Upload gambar produk
   @Roles(Role.ADMIN)
   @Post('image')
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('No file uploaded');
+    if (!file) throw new BadRequestException('File tidak ditemukan');
 
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-    const ext = file.originalname.split('.').pop()?.toLowerCase();
-    const allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-
-    if (!allowedMimes.includes(file.mimetype) && !allowedExts.includes(ext as string)) {
-      throw new BadRequestException('Format file tidak didukung.');
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimes.includes(file.mimetype)) {
+      throw new BadRequestException('Format file tidak didukung');
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      throw new BadRequestException('Ukuran file maksimal 2MB');
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      throw new BadRequestException('Ukuran file maksimal 5MB');
+    const imageUrl = await this.uploadService.uploadToCloudinary(file, 'nyamnyam/products');
+    return { url: imageUrl };
+  }
+
+  // Customer: Upload bukti pembayaran
+  @UseGuards(JwtAuthGuard)
+  @Post('payment-proof')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadPaymentProof(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('File tidak ditemukan');
+
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimes.includes(file.mimetype)) {
+      throw new BadRequestException('Format file tidak didukung');
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      throw new BadRequestException('Ukuran file maksimal 2MB');
     }
 
-    const url = await this.uploadService.uploadToCloudinary(file);
-    return { url };
+    const imageUrl = await this.uploadService.uploadToCloudinary(file, 'nyamnyam/payment-proofs');
+    return { url: imageUrl };
   }
 }
