@@ -29,28 +29,33 @@ export class UploadService {
   }
 
   async uploadToCloudinary(file: Express.Multer.File): Promise<string> {
-    this.logger.log(`Uploading: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
+  this.logger.log(`Uploading: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
 
-    return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
+    try {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'nyamnyam/products',
           transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }],
-          // Tidak memaksakan format webp agar tetap asli
         },
         (error, result) => {
           if (error) {
-            this.logger.error(`Cloudinary error: ${JSON.stringify(error)}`);
+            this.logger.error(`Cloudinary callback error: ${JSON.stringify(error)}`);
             reject(new InternalServerErrorException(`Cloudinary: ${error.message}`));
           } else if (result && result.secure_url) {
             this.logger.log(`Success: ${result.secure_url}`);
             resolve(result.secure_url);
           } else {
+            this.logger.error(`Invalid result: ${JSON.stringify(result)}`);
             reject(new InternalServerErrorException('Invalid response from Cloudinary'));
           }
         },
       );
       uploadStream.end(file.buffer);
-    });
-  }
+    } catch (err) {
+      this.logger.error(`Upload stream error: ${err}`);
+      reject(err);
+    }
+  });
+}
 }

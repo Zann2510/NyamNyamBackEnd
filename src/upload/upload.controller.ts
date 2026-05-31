@@ -14,8 +14,7 @@ import { UploadService } from './upload.service';
 @Controller('upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
-
-  @Public()        // ← tambah sementara untuk test
+        // ← tambah sementara untuk test
   @Roles(Role.ADMIN)
   @Post('image')
   @UseInterceptors(FileInterceptor('file'))
