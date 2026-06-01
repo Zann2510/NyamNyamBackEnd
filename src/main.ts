@@ -18,9 +18,10 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
   // CORS
-  const allowedOrigins = process.env.FRONTEND_URL || '*';
   app.enableCors({
-    origin: allowedOrigins === '*' ? true : allowedOrigins.split(','),
+  origin: process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',')
+    : 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
