@@ -12,19 +12,21 @@ import { Role } from '@prisma/client';
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
+  // ─── POST ──────────────────────────────────────────────────
   @Post()
   @ApiOperation({ summary: 'Create a new order (customer)' })
   @ApiBody({ type: CreateOrderDto })
-  @ApiResponse({ status: 201, description: 'Order created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - insufficient stock or invalid data' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
   create(@Request() req, @Body() createOrderDto: CreateOrderDto) {
     return this.orderService.createOrder(req.user.userId, createOrderDto);
   }
 
+  // ─── GET — static routes FIRST, dynamic (:id) LAST ────────
+  // PENTING: Di NestJS/Express, route statis harus didefinisikan
+  // SEBELUM route dinamis (:id). Kalau terbalik, "summary", "me",
+  // dan "all" akan ditangkap sebagai nilai :id dan menghasilkan 404.
+
   @Get('me')
   @ApiOperation({ summary: 'Get current user orders (customer)' })
-  @ApiResponse({ status: 200, description: 'List of user orders' })
   getUserOrders(@Request() req) {
     return this.orderService.getUserOrders(req.user.userId);
   }
@@ -32,17 +34,21 @@ export class OrderController {
   @Roles(Role.ADMIN)
   @Get('all')
   @ApiOperation({ summary: 'Get all orders (admin only)' })
-  @ApiResponse({ status: 200, description: 'List of all orders with user details' })
   getAllOrders() {
     return this.orderService.getAllOrders();
   }
 
+  @Roles(Role.ADMIN)
+  @Get('summary')
+  @ApiOperation({ summary: 'Get order summary/stats (admin only)' })
+  getOrderSummary() {
+    return this.orderService.getOrderSummary();
+  }
+
+  // ─── Dynamic route — harus PALING BAWAH ───────────────────
   @Get(':id')
   @ApiOperation({ summary: 'Get order by ID (admin or owner)' })
   @ApiParam({ name: 'id', description: 'Order ID' })
-  @ApiResponse({ status: 200, description: 'Order found' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
   getOrderById(@Param('id') id: string, @Request() req) {
     return this.orderService.getOrderById(id, req.user.userId, req.user.role);
   }
@@ -52,8 +58,6 @@ export class OrderController {
   @ApiOperation({ summary: 'Update order status (admin only)' })
   @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiBody({ type: UpdateOrderStatusDto })
-  @ApiResponse({ status: 200, description: 'Order status updated' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
   updateStatus(@Param('id') id: string, @Body() updateStatusDto: UpdateOrderStatusDto) {
     return this.orderService.updateOrderStatus(id, updateStatusDto);
   }
@@ -61,16 +65,7 @@ export class OrderController {
   @Delete(':id')
   @ApiOperation({ summary: 'Cancel order (admin or owner, only if pending)' })
   @ApiParam({ name: 'id', description: 'Order ID' })
-  @ApiResponse({ status: 200, description: 'Order cancelled and stock restored' })
-  @ApiResponse({ status: 400, description: 'Cannot cancel non-pending order' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
   cancelOrder(@Param('id') id: string, @Request() req) {
     return this.orderService.cancelOrder(id, req.user.userId, req.user.role);
-  }
-
-  @Roles(Role.ADMIN)
-  @Get('summary')
-  async getOrderSummary() {
-    return this.orderService.getOrderSummary();
   }
 }
