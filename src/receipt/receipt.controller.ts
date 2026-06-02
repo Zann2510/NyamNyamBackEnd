@@ -17,8 +17,10 @@ export class ReceiptController {
     try {
       await this.receiptService.generateReceipt(orderId, res);
     } catch (error) {
+      console.error('Error:', error);
+      const message = error instanceof Error ? error.message : String(error);
       throw new HttpException(
-        error.message || 'Gagal generate struk',
+        message || 'Gagal generate struk',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
