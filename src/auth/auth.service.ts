@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -36,5 +37,17 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const access_token = this.jwtService.sign(payload);
     return { access_token, user: { id: user.id, email: user.email, name: user.name, role: user.role } };
+  }
+
+  // METHOD LOGOUT SEDERHANA (tanpa blacklist)
+  async logout(token: string, userId: number) {
+    // Cukup return response sukses
+    // Client akan menghapus token dari localStorage/sessionStorage
+    return {
+      success: true,
+      message: 'Logout berhasil',
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+    };
   }
 }
