@@ -27,6 +27,13 @@ enum PaymentMethod {
   CARD
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -46,7 +53,7 @@ model Product {
   name        String
   description String
   price       Float
-  image       String // URL gambar
+  image       String 
   stock       Int      @default(0)
   isAvailable Boolean  @default(true)
   categoryId  String
@@ -62,7 +69,7 @@ model Product {
 model Category {
   id       String    @id @default(cuid())
   name     String    @unique
-  icon     String? // nama icon (opsional)
+  icon     String? 
   products Product[]
 }
 
@@ -72,8 +79,14 @@ model Order {
   total           Float
   status          OrderStatus    @default(PENDING)
   paymentMethod   PaymentMethod?
-  deliveryAddress String // untuk dine-in bisa diisi nomor meja
+  paymentStatus   PaymentStatus  @default(PENDING)  // ✅ TAMBAHKAN: status pembayaran
   paymentProofUrl String?
+  deliveryAddress String          
+  receiptNumber   String?         @unique 
+  receiptUrl      String?         
+  notes           String?         
+  discount        Float?          @default(0) 
+  tax             Float?          @default(0) 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -82,6 +95,7 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@index([receiptNumber])
 }
 
 model OrderItem {
@@ -89,7 +103,8 @@ model OrderItem {
   orderId   String
   productId String
   quantity  Int
-  price     Float // harga saat pemesanan (snapshot)
+  price     Float 
+  subtotal  Float? 
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])

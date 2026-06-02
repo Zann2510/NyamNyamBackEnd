@@ -9,8 +9,9 @@ import { UserModule } from './user/user.module';
 import { CategoryModule } from './category/category.module';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
-import { UploadModule } from './upload/upload.module';  // <- PASTIKAN ADA
+import { UploadModule } from './upload/upload.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ReceiptModule } from './receipt/receipt.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -22,6 +23,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     ProductModule,
     OrderModule,
     UploadModule,
+    ReceiptModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -19,9 +19,9 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-  origin: process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',')
-    : 'https://nyamnyamfrontend-production.up.railway.app',
+    origin: process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(',')
+      : 'https://nyamnyamfrontend-production.up.railway.app',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -43,7 +43,8 @@ async function bootstrap() {
   // Swagger
   const config = new DocumentBuilder()
     .setTitle('NyamNyam Food Delivery API')
-    .setDescription(`
+    .setDescription(
+      `
       ## API Documentation for NyamNyam
 
       ### Features:
@@ -56,7 +57,8 @@ async function bootstrap() {
 
       ### Authentication:
       Use \`/auth/login\` to obtain a JWT token, then add it to the Authorize button.
-    `)
+    `,
+    )
     .setVersion('1.0.0')
     .addBearerAuth(
       {
