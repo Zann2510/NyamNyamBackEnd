@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 // src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -17,11 +18,9 @@ async function bootstrap() {
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ extended: true, limit: '10mb' }));
 
-  // CORS
+  // CORS - Update untuk Railway
   app.enableCors({
-    origin: process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',')
-      : 'https://nyamnyamfrontend-production.up.railway.app',
+    origin: true, // Izinkan semua origin untuk testing (bisa diatur lebih ketat nanti)
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -92,11 +91,17 @@ async function bootstrap() {
     customSiteTitle: 'NyamNyam API Documentation',
   });
 
+  // PERUBAHAN PENTING UNTUK RAILWAY
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  
+  // Listen on all network interfaces (0.0.0.0) untuk Railway
+  await app.listen(port, '0.0.0.0');
+  
   logger.log(`🚀 Server running on: ${await app.getUrl()}`);
   logger.log(`📚 Swagger UI: ${await app.getUrl()}/api-docs`);
   logger.log(`💚 Health check: ${await app.getUrl()}/health`);
+  logger.log(`🔧 Port: ${port}`);
+  logger.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
 bootstrap();
