@@ -27,9 +27,6 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  // Global prefix (opsional, jika ingin semua route diawali /api)
-  // app.setGlobalPrefix('api');
-
   // Global pipes
   app.useGlobalPipes(
     new ValidationPipe({

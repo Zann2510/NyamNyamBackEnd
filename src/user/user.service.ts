@@ -11,7 +11,14 @@ export class UserService {
   async getProfile(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, phone: true, address: true, role: true },
+      select: { 
+        id: true, 
+        email: true, 
+        name: true, 
+        phone: true, 
+        address: true, 
+        role: true 
+      },
     });
   }
 
@@ -23,7 +30,14 @@ export class UserService {
         phone: dto.phone,
         address: dto.address,
       },
-      select: { id: true, email: true, name: true, phone: true, address: true, role: true },
+      select: { 
+        id: true, 
+        email: true, 
+        name: true, 
+        phone: true, 
+        address: true, 
+        role: true 
+      },
     });
   }
 
